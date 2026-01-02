@@ -1,20 +1,32 @@
+#!/usr/bin/env python3
+"""
+Track lane edge detection module - Part of the edge detection framework.
+Detects track lane edges in images using various statistical methods: IQR, Standard Deviation, and Rolling Standard Deviation.
+"""
+# ============================================================================
+# Import Libraries
+# ============================================================================
+
 import numpy as np
 
+# ============================================================================
+# Edge Detection - Base Class
+# ============================================================================
 
 class EdgeDetector:
     def __init__(self, paths, distances, sqr_derivs=True) -> None:
-        """`EdgeDetector` A generic class that gets implemented with different edge detection strategies
+        """`EdgeDetector` A base class that gets implemented with different edge detection strategies
 
         Args:
-            paths (_type_): _description_
-            distances (_type_): _description_
-            sqr_derivs (bool, optional): _description_. Defaults to True.
+            paths (list[np.ndarray]): List of numpy arrays containing coordinates along image paths (from the source point to image boundaries)
+            distances (list[np.ndarray]): List of numpy arrays containing Euclidean distances corresponding to each returned coordinate
+            sqr_derivs (bool, optional): Whether to square the derivatives. Defaults to True.
         """
-        # extreme (int, optional): _description_. Defaults to 1000.
+        print("🔄🔄🔄🔄🔄 CALLFLOW: Entering edge_detector.py - Track Lane Edge Detection 🔄🔄🔄🔄🔄")
+        
         self.paths = paths
         self._distances = distances
         self._sqr_derivs = bool(sqr_derivs)
-        # self.extreme = extreme
 
         if sqr_derivs:
             self._op_derivs = self._sqr
@@ -46,13 +58,14 @@ class EdgeDetector:
             img (np.ndarray): The image to be processed
 
         Returns:
-            list[np.ndarray]: A list of boolean numpy arrays that match the dimensions of each path.
+            list[np.ndarray]: A list of boolean numpy arrays that match the dimensions of each path, where 'True' indicates an outlier pixel.
         """
         pass
 
     def _get_pixels(self, img):
+        """Get first derivatives of pixel values along paths"""
         return [self._first_deriv(img[y, x]) for x, y in self.paths]
-
+    
     def _get_sqr_pixels(self, img):
         pixels = self._get_pixels(img)
         return [pix**2 if self._sqr_derivs else np.abs(pix) for pix in pixels]
@@ -62,16 +75,19 @@ class EdgeDetector:
         #     # if no edge is found, return a large value
         #     # to simulate the edge being very distant
         #     return (None, None, 1000)
-        outliers[-1] = True
+        outliers[-1] = True # Force the last pixel to be an outlier - a hack to avoid the return of null values in case no real outlier
         return (
-            self.paths[i][0, outliers][0],
-            self.paths[i][1, outliers][0],
-            self._distances[i][outliers][0],
+            self.paths[i][0, outliers][0], # X coordinate of the first-outlier pixel (nearest edge)
+            self.paths[i][1, outliers][0], # Y coordinate of the first-outlier pixel (nearest edge)
+            self._distances[i][outliers][0], # Distance of the first-outlier pixel (nearest edge)
         )
 
     def get_edges(self, img):
-        return [self._get_entry(i, o) for i, o in enumerate(self._get_outliers(img))]
+        return [self._get_entry(i, o) for i, o in enumerate(self._get_outliers(img))] # Returns a list of tupples, each tupple include: (x_coordinate, y_coordinate, distance_from_origin) of outlier points or edges
 
+# ============================================================================
+# Edge Detection - IQR Technique
+# ============================================================================
 
 class IQRDetector(EdgeDetector):
     def __init__(self, paths, distances, distance=None, **kwargs) -> None:
@@ -99,6 +115,9 @@ class IQRDetector(EdgeDetector):
     def _get_outliers(self, img):
         return [self._iqr(pix, self._distance) for pix in self._get_sqr_pixels(img)]
 
+# ============================================================================
+# Edge Detection - Standard Deviation Technique
+# ============================================================================
 
 class StdDetector(EdgeDetector):
     def __init__(
@@ -129,6 +148,9 @@ class StdDetector(EdgeDetector):
         )
         return [get_outlier(line, pixels_all) for line in pixels]
 
+# ============================================================================
+# Edge Detection - Rolling Standard Deviation Technique
+# ===========================================================================
 
 class RollStdDetector(EdgeDetector):
     def __init__(
@@ -165,7 +187,7 @@ class RollStdDetector(EdgeDetector):
 
     @staticmethod
     def _roll(a, window):
-        a_n = np.concatenate([[np.NAN] * (window - 1), a])
+        a_n = np.concatenate([[np.nan] * (window - 1), a])
         return np.stack([a_n[i - window : i] for i in range(window, a_n.shape[0] + 1)])
 
     def _scale(self, roll):
