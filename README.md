@@ -6,8 +6,6 @@ A public repository for the code used in the thesis: The Effect of Model Input R
 
 ## CLI Reference for Training, Evaluation, and Visualization Scripts
 
----
-
 ### Table of Contents
 
 - [Training Scripts](#training-scripts)
@@ -47,9 +45,9 @@ python core_code/image_train.py --continue-training --model-path <model_path> --
 ```
 
 **Command-line Arguments:**
-- `--continue-training`: Resume training from an existing model
-- `--model-path`: Path to the saved model file
-- `--timesteps`: Number of training timesteps (optional)
+- `--continue-training, --continue, -c`: Resume training from an existing model
+- `--model-path, --model, -m`: Path to the saved model file (.zip)
+- `--timesteps,-t`: Number of training timesteps
 
 ---
 
@@ -73,9 +71,9 @@ python core_code/vec_train.py --continue-training --model-path <model_path> --ti
 ```
 
 **Command-line Arguments:**
-- `--continue-training`: Resume training from an existing model
-- `--model-path`: Path to the saved model file
-- `--timesteps`: Number of training timesteps (optional)
+- `--continue-training, --continue, -c`: Resume training from an existing model
+- `--model-path, --model, -m`: Path to the saved model file (.zip)
+- `--timesteps,-t`: Number of training timesteps
 
 ---
 
@@ -137,7 +135,7 @@ python core_code/model_evaluator_jetson.py --model <model_path> --myconfig <cust
 
 **Script:** `utility_code/sim_evaluation_visualizer.py`
 
-**Description:** Extract and visualize key metrics from simulator evaluation log files.
+**Description:** Extract and visualize key metrics from the simulator evaluation log files.
 
 **Usage:**
 
@@ -145,19 +143,25 @@ python core_code/model_evaluator_jetson.py --model <model_path> --myconfig <cust
 python utility_code/sim_evaluation_visualizer.py <simulator_evaluation_log_file>
 ```
 
+**Command-line Arguments:**
+- `simulator_evaluation_log_file` (required): Path to the simulator evaluation log file (.txt)
+
 ---
 
 #### Jetson Evaluation Visualizer
 
 **Script:** `utility_code/jetson_evaluation_visualizer.py`
 
-**Description:** Visualize real-world evaluation data from Jetson Nano runs.
+**Description:** Visualize real-world evaluation data from Jetson Nano evaluation runs.
 
 **Usage:**
 
 ```bash
-python utility_code/jetson_evaluation_visualizer.py <jetson_log_file>
+python utility_code/jetson_evaluation_visualizer.py <jetson_evaluation_log_file>
 ```
+
+**Command-line Arguments:**
+- `jetson_evaluation_log_file` (required): Path to the Jetson Nano evaluation log file (.txt)
 
 ---
 
@@ -173,6 +177,10 @@ python utility_code/jetson_evaluation_visualizer.py <jetson_log_file>
 python utility_code/car_path_visualizer.py <simulator_evaluation_log_file>
 ```
 
+**Command-line Arguments:**
+- `log_file` (required): Path to the evaluation log file (.txt)
+- `--output, -o`: Output filename
+
 ---
 
 #### CTE Distribution Comparison
@@ -186,6 +194,11 @@ python utility_code/car_path_visualizer.py <simulator_evaluation_log_file>
 ```bash
 python utility_code/cte_distribution_comparison.py <image_model_log_file> <vector_model_log_file>
 ```
+
+**Command-line Arguments:**
+- `image_log` (required): Path to image-based model evaluation log file (.txt)
+- `vector_log` (required): Path to vector-based model evaluation log file (.txt)
+- `-o, --output`: Output filename for the histogram plot
 
 ---
 
