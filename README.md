@@ -21,7 +21,7 @@ A public repository for the code used in the thesis: The Effect of Model Input R
   - [Jetson Evaluation Visualizer](#jetson-evaluation-visualizer)
   - [Car Path Visualizer](#car-path-visualizer)
   - [CTE Distribution Comparison](#cte-distribution-comparison)
-  - [t-SNE Analyis](#t-SNE)
+  - [t-SNE Analysis](#t-sne-analysis)
 
 ---
 
