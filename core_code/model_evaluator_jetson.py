@@ -44,10 +44,10 @@ from rl_pilot import RLPilot # RLPilot class for model inference
 # Settings
 # ====================================================================================
 
-NUM_EPISODES = 10
-MAX_STEPS_PER_EPISODE = 1000
+NUM_EPISODES = 5
+MAX_STEPS_PER_EPISODE = 300
 START_DELAY_SECONDS = 5  # Startup delay before evaluation begins
-BREAK_BETWEEN_EPISODES_SECONDS = 10  # Rest period between episodes
+BREAK_BETWEEN_EPISODES_SECONDS = 30  # Rest period between episodes
 
 # ====================================================================================
 # Episode Tracker Class
@@ -74,6 +74,8 @@ class EpisodeTracker:
         # Episode control flags
         self.episode_active = False
         self.episode_stopped = False
+        self.evaluation_complete = False  # Flag to signal evaluation completion
+        self.in_break = False  # Flag to indicate break period between episodes
         
     def start(self):
         """Kick off model-evaluation episodes"""
@@ -82,7 +84,7 @@ class EpisodeTracker:
         self.current_step = 0
         self.episode_start_time = time.time()
         self.step_data = []
-        print(f"\n🚗 Starting Episode {self.current_episode}/{self.num_episodes}...")
+        self.episode_start_msg = False  # Flag to print message on episode first step
     
     def record_step_data(self, steering, throttle, inference_ms):
         """Record metrics for the current step"""
@@ -120,6 +122,9 @@ class EpisodeTracker:
     
     def _finish_episode(self):
         """Finish current episode and prepare for the next"""
+        # Stop the car immediately
+        self.episode_active = False
+        
         episode_duration = time.time() - self.episode_start_time
         
         # Calculate averages from step data
@@ -144,30 +149,34 @@ class EpisodeTracker:
         }
         self.episode_results.append(result)
         
-        print(f"✅ Episode {self.current_episode} completed: {self.current_step} steps in {episode_duration:.1f}s")
+        print(f"✅   Episode {self.current_episode} completed: {self.current_step} steps in {episode_duration:.1f}s")
         if self.step_data:
             print(f"   Averages: steering={episode_avg_steering:.3f}, throttle={episode_avg_throttle:.3f}, inference={episode_avg_inference_ms:.1f}ms")
         
         # Check if we should continue
         if self.current_episode >= self.num_episodes or self.episode_stopped:
-            self.episode_active = False
+            self.evaluation_complete = True  # Signal completion
             print("\n🏁 All episodes completed!")
             return
         
-        # Prepare for the next episode
-        print(f"⏳ Let's have a break for {BREAK_BETWEEN_EPISODES_SECONDS} seconds before continuing with the next episode...")
+        # Prepare for the next episode - enter break period
+        self.in_break = True
+        print(f"⏳    Let's have a break for {BREAK_BETWEEN_EPISODES_SECONDS} seconds before continuing with the next episode...")
         time.sleep(BREAK_BETWEEN_EPISODES_SECONDS)
         
+        # Exit break period and start next episode
+        self.in_break = False
         self.current_episode += 1
         self.current_step = 0
         self.episode_start_time = time.time()
         self.step_data = []  # Reset step data for new episode
-        print(f"\n🚗 Starting Episode {self.current_episode}/{self.num_episodes}...")
+        self.episode_start_msg = False  # Reset flag for new episode
+        self.episode_active = True  # Reactivate for next episode
     
     def save_report(self, model_path):
         """Save model evaluation report to JSON"""
         if not self.episode_results:
-            print("⚠️  No evaluation results to save")
+            print("⚠️   No evaluation results to save")
             return
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -191,7 +200,7 @@ class EpisodeTracker:
         with open(eval_filename, 'w') as f:
             json.dump(report, f, indent=2)
         
-        print(f"\n📊 Evaluation report saved to: {eval_filename}")
+        print(f"\n📊    Evaluation report saved to: {eval_filename}")
         print(f"   Episodes completed: {len(self.episode_results)}/{self.num_episodes} episodes")
         print(f"   Averages: {avg_episode_steps:.0f} steps, {avg_episode_duration:.1f}s per episode")
 
@@ -204,14 +213,24 @@ class RLEvalPilot:
     def __init__(self, model_path, tracker):
         self.rl_pilot = RLPilot(model_path)
         self.tracker = tracker
-        print(f"✅ {self.rl_pilot.model_type} model loaded for evaluation")
+        print(f"✅   {self.rl_pilot.model_type} model loaded for evaluation")
     
     def run(self, img_arr):
         """Run inference and track episode progress"""
         # Check if evaluation has started (handles the 5-second startup delay)
         if not self.tracker.episode_active:
-            # Return zero commands during startup wait period
+            # Return zero commands during startup wait period or break between episodes
             return 0.0, 0.0
+        
+        # Check if we're in a break period between episodes
+        if self.tracker.in_break:
+            # Return zero commands during break period
+            return 0.0, 0.0
+        
+        # Print episode start message on first step
+        if not self.tracker.episode_start_msg:
+            print(f"\n🏎️    Starting Episode {self.tracker.current_episode}/{self.tracker.num_episodes}...")
+            self.tracker.episode_start_msg = True
         
         # Retrieve action predictions from the model
         steering, throttle, inference_ms = self.rl_pilot.run(img_arr)
@@ -302,15 +321,34 @@ def run_evaluation(cfg, model_path, episodes, max_steps):
     starter = threading.Thread(target=delayed_start, daemon=True)
     starter.start()
     
-    print(f"\n🚀 Evaluation starting in {START_DELAY_SECONDS} seconds...")
-    print(f"📊 Will run {episodes} episodes, {max_steps} steps each")
+    # Store the vehicle instance for clean shutdown
+    vehicle_instance = None
+    
+    # Monitor thread that triggers graceful shutdown
+    def monitor_completion():
+        """Monitor evaluation progress and trigger shutdown when complete"""
+        while not tracker.evaluation_complete:
+            time.sleep(1)
+        # Give a moment for final messages to print
+        time.sleep(2)
+        print("🛑   Model evaluation completed, initiating graceful shutdown...")
+        
+        # Trigger KeyboardInterrupt to exit the drive loop gracefully
+        import signal
+        os.kill(os.getpid(), signal.SIGINT)
+    
+    monitor = threading.Thread(target=monitor_completion, daemon=True)
+    monitor.start()
+    
+    print(f"\n🚀    Model evaluation will start shortly...")
+    print(f"📊  Will run {episodes} episodes, {max_steps} steps each")
     
     try:
         # Run the normal drive loop (managed by tracker)
         drive(cfg, model_path=model_path, use_joystick=False, model_type=None)
         
     except KeyboardInterrupt:
-        print("\n⚠️  Model evaluation interrupted by user, exiting...")
+        print("\n⚠️ Evaluation complete, shutting down gracefully...")
         tracker.episode_stopped = True
         
     finally:
@@ -322,7 +360,7 @@ def run_evaluation(cfg, model_path, episodes, max_steps):
         tracker.save_report(model_path)
         eval_pilot.shutdown()
         
-        print("✅ Model evaluation complete on Jetson Nano...")
+        print("✅   Model evaluation complete on Jetson Nano...Goodbye!\n")
 
 # ====================================================================================
 # Command Line Interface
@@ -344,7 +382,7 @@ def main():
     
     # Validate model exists
     if not os.path.exists(args.model):
-        print(f"❌ Model not found: {args.model}")
+        print(f"❌  Model not found: {args.model}")
         return
     
     # Load DonkeyCar config
@@ -352,7 +390,7 @@ def main():
     
     # Print header
     print("\n" + "="*60)
-    print("🤖 PPO Model Evaluation on Jetson Nano")
+    print("🤖   PPO Model Evaluation on Jetson Nano")
     print("="*60)
     print(f"Model:  {os.path.basename(args.model)}")
     print(f"Evaluation episodes:   {args.episodes}")

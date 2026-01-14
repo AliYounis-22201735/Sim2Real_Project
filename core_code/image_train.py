@@ -312,6 +312,8 @@ cfg = TrainingCycleConfig()
 
 sim_conf = {
     "max_cte": cfg.MAX_CTE,
+    # "cam_config":
+    # {"fov": 75}
 }
 
 # ============================================================================

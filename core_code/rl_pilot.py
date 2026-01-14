@@ -276,4 +276,3 @@ class RLPilot:
         self.image_frame_stack = None
         self.image_processor = None
         self.tsne_collected_samples = None
-        print("🛑 RLPilot shutdown complete")

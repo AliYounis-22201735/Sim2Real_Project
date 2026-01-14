@@ -62,6 +62,10 @@ MAX_CTE = 2.0  # Maximum allowed cross track error
 # Simulator configuration dictionary
 SIM_CONF = {
     "max_cte": MAX_CTE,
+    # "cam_config":
+    # {
+    # "fov": 75,
+    # }
 }
 
 # ============================================================================

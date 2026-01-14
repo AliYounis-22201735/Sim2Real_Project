@@ -22,7 +22,6 @@ from datetime import datetime
 import cv2
 import numpy as np
 import random
-import albumentations as A
 
 # Add current directory and parent directory to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -190,11 +189,17 @@ class ImageProcessor:
 
         print(f"💾 Raw and processed images will be saved to {self.image_saving_dir} every {self.image_saving_freq} frames.")
         
-        # Initialize Albumentations transform pipeline
-        self._init_augmentation_pipeline()
+        # Initialize Albumentations transform pipeline only if data augmentation is enabled
+        if self.augmentation_probability > 0:
+            self._init_augmentation_pipeline()
+        else:
+            self.augmentation_transform = None
     
     def _init_augmentation_pipeline(self):
         """Initialize Albumentations augmentation pipeline with all transforms"""
+        # Import Albumentations library
+        import albumentations as A
+        
         transform_list = []
 
         # Motion Blur (simulates camera motion during driving)
@@ -448,4 +453,3 @@ class ImageProcessor:
             self._save_images(image, processed_image)
 
         return processed_image
-
