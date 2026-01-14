@@ -16,11 +16,11 @@
 # MODELS_PATH = os.path.join(CAR_PATH, 'models')
 # 
 # #VEHICLE
-# DRIVE_LOOP_HZ = 20      # the vehicle loop will pause if faster than this speed.
+DRIVE_LOOP_HZ = 60      # the vehicle loop will pause if faster than this speed.
 # MAX_LOOPS = None        # the vehicle loop can abort after this many iterations, when given a positive integer.
 # 
 # #CAMERA
-# CAMERA_TYPE = "PICAM"   # (PICAM|WEBCAM|CVCAM|CSIC|V4L|D435|MOCK|IMAGE_LIST)
+CAMERA_TYPE = "CSIC"   # (PICAM|WEBCAM|CVCAM|CSIC|V4L|D435|MOCK|IMAGE_LIST)
 # IMAGE_W = 160
 # IMAGE_H = 120
 # IMAGE_DEPTH = 3         # default RGB=3, make 1 for mono
@@ -38,7 +38,7 @@
 # 
 # #9865, over rides only if needed, ie. TX2..
 # PCA9685_I2C_ADDR = 0x40     #I2C address, use i2cdetect to validate this number
-# PCA9685_I2C_BUSNUM = None   #None will auto detect, which is fine on the pi. But other platforms should specify the bus num.
+PCA9685_I2C_BUSNUM = 1   #None will auto detect, which is fine on the pi. But other platforms should specify the bus num.
 # 
 # #SSD1306_128_32
 # USE_SSD1306_128_32 = False    # Enable the SSD_1306 OLED Display
@@ -75,19 +75,19 @@
 # # Uses a PwmPin for steering (servo) and a second PwmPin for throttle (ESC)
 # # Base PWM Frequence is presumed to be 60hz; use PWM_xxxx_SCALE to adjust pulse with for non-standard PWM frequencies
 # #
-# PWM_STEERING_THROTTLE = {
-#     "PWM_STEERING_PIN": "PCA9685.1:40.1",   # PWM output pin for steering servo
-#     "PWM_STEERING_SCALE": 1.0,              # used to compensate for PWM frequency differents from 60hz; NOT for adjusting steering range
-#     "PWM_STEERING_INVERTED": False,         # True if hardware requires an inverted PWM pulse
-#     "PWM_THROTTLE_PIN": "PCA9685.1:40.0",   # PWM output pin for ESC
-#     "PWM_THROTTLE_SCALE": 1.0,              # used to compensate for PWM frequence differences from 60hz; NOT for increasing/limiting speed
-#     "PWM_THROTTLE_INVERTED": False,         # True if hardware requires an inverted PWM pulse
-#     "STEERING_LEFT_PWM": 460,               #pwm value for full left steering
-#     "STEERING_RIGHT_PWM": 290,              #pwm value for full right steering
-#     "THROTTLE_FORWARD_PWM": 500,            #pwm value for max forward throttle
-#     "THROTTLE_STOPPED_PWM": 370,            #pwm value for no movement
-#     "THROTTLE_REVERSE_PWM": 220,            #pwm value for max reverse throttle
-# }
+PWM_STEERING_THROTTLE = {
+    "PWM_STEERING_PIN": "PCA9685.1:40.0",   # PWM output pin for steering servo
+    "PWM_STEERING_SCALE": 1.0,              # used to compensate for PWM frequency differents from 60hz; NOT for adjusting steering range
+    "PWM_STEERING_INVERTED": False,         # True if hardware requires an inverted PWM pulse
+    "PWM_THROTTLE_PIN": "PCA9685.1:40.1",   # PWM output pin for ESC
+    "PWM_THROTTLE_SCALE": 1.0,              # used to compensate for PWM frequence differences from 60hz; NOT for increasing/limiting speed
+    "PWM_THROTTLE_INVERTED": False,         # True if hardware requires an inverted PWM pulse
+    "STEERING_LEFT_PWM": 460,               #pwm value for full left steering
+    "STEERING_RIGHT_PWM": 290,              #pwm value for full right steering
+    "THROTTLE_FORWARD_PWM": 480,            #pwm value for max forward throttle - default 500 - (beep 375, move 385, max sound 460):
+    "THROTTLE_STOPPED_PWM": 370,            #pwm value for no movement - default 370
+    "THROTTLE_REVERSE_PWM": 280,            #pwm value for max reverse throttle - default 220
+}
 # 
 # #
 # # I2C_SERVO (deprecated in favor of PWM_STEERING_THROTTLE)
@@ -378,8 +378,6 @@
 # SEND_BEST_MODEL_TO_PI = False   #change to true to automatically send best model during training
 # CREATE_TF_LITE = True           # automatically create tflite model in training
 # CREATE_TENSOR_RT = False        # automatically create tensorrt model in training
-# SAVE_MODEL_AS_H5 = False        # if old keras format should be used instead of savedmodel
-# CACHE_POLICY = 'ARRAY'          # if images are cached as array in training other options are 'NOCACHE' and 'BINARY'
 # 
 # PRUNE_CNN = False               #This will remove weights from your model. The primary goal is to increase performance.
 # PRUNE_PERCENT_TARGET = 75       # The desired percentage of pruning.
@@ -555,7 +553,7 @@
 # WEB_INIT_MODE = "user"              # which control mode to start in. one of user|local_angle|local. Setting local will start in ai mode.
 # 
 # #JOYSTICK
-# USE_JOYSTICK_AS_DEFAULT = True      #when starting the manage.py, when True, will not require a --js option to use the joystick
+# USE_JOYSTICK_AS_DEFAULT = False      #when starting the manage.py, when True, will not require a --js option to use the joystick
 # JOYSTICK_MAX_THROTTLE = 0.5         #this scalar is multiplied with the -1 to 1 throttle value to limit the maximum throttle. This can help if you drop the controller or just don't need the full speed available.
 # JOYSTICK_STEERING_SCALE = 1.0       #some people want a steering that is less sensitve. This scalar is multiplied with the steering -1 to 1. It can be negative to reverse dir.
 # AUTO_RECORD_ON_THROTTLE = True      #if true, we will record whenever throttle is not zero. if false, you must manually toggle recording with some other trigger. Usually circle button on joystick.
@@ -696,10 +694,9 @@
 # #This enables that, and sets the path to the simualator and the environment.
 # #You will want to download the simulator binary from: https://github.com/tawnkramer/donkey_gym/releases/download/v18.9/DonkeySimLinux.zip
 # #then extract that and modify DONKEY_SIM_PATH.
-DONKEY_GYM = True
-DONKEY_SIM_PATH = "/home/ealiyos/DonkeySimLinux/donkey_sim.x86_64" #"/home/tkramer/projects/sdsandbox/sdsim/build/DonkeySimLinux/donkey_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
-DONKEY_GYM_ENV_NAME = "donkey-waveshare-v0" # ("donkey-generated-track-v0"|"donkey-generated-roads-v0"|"donkey-warehouse-v0"|"donkey-avc-sparkfun-v0")
-VERBOSE_THROTTLE_SCALE = True
+# DONKEY_GYM = False
+# DONKEY_SIM_PATH = "path to sim" #"/home/tkramer/projects/sdsandbox/sdsim/build/DonkeySimLinux/donkey_sim.x86_64" when racing on virtual-race-league use "remote", or user "remote" when you want to start the sim manually first.
+# DONKEY_GYM_ENV_NAME = "donkey-generated-track-v0" # ("donkey-generated-track-v0"|"donkey-generated-roads-v0"|"donkey-warehouse-v0"|"donkey-avc-sparkfun-v0")
 # GYM_CONF = { "body_style" : "donkey", "body_rgb" : (128, 128, 128), "car_name" : "car", "font_size" : 100} # body style(donkey|bare|car01) body rgb 0-255
 # GYM_CONF["racer_name"] = "Your Name"
 # GYM_CONF["country"] = "Place"
@@ -725,7 +722,7 @@ VERBOSE_THROTTLE_SCALE = True
 # AI_LAUNCH_KEEP_ENABLED = False      # when False ( default) you will need to hit the AI_LAUNCH_ENABLE_BUTTON for each use. This is safest. When this True, is active on each trip into "local" ai mode.
 # 
 # #Scale the output of the throttle of the ai pilot for all model types.
-# AI_THROTTLE_MULT = 1.0              # this multiplier will scale every throttle value for all output from NN models
+AI_THROTTLE_MULT = 1.0              # this multiplier will scale every throttle value for all output from NN models
 # 
 # #Path following
 # PATH_FILENAME = "donkey_path.pkl"   # the path will be saved to this filename
@@ -756,7 +753,3 @@ VERBOSE_THROTTLE_SCALE = True
 # # FPS counter
 # SHOW_FPS = False
 # FPS_DEBUG_INTERVAL = 10    # the interval in seconds for printing the frequency info into the shell
-# 
-# # PI connection
-# PI_USERNAME = "pi"
-# PI_HOSTNAME = "donkeypi.local"

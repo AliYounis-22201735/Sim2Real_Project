@@ -42,6 +42,8 @@ from donkeycar.parts.explode import ExplodeDict
 from donkeycar.parts.transform import Lambda
 from donkeycar.parts.pipe import Pipe
 from donkeycar.utils import *
+# Import RLPilot class for handling PyTorch-trained models
+from rl_pilot import RLPilot
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -314,9 +316,14 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
         # for the configured model format
         #
         model_reload_cb = None
-        if '.h5' in model_path or '.trt' in model_path or '.tflite' in \
-            model_path or '.savedmodel' in model_path or '.pth' in model_path:
-            # load the whole model with weigths, etc
+        # Handle different model types including Pytorch-trained (.zip) models: 
+        # if '.h5' in model_path or '.trt' in model_path or '.tflite' in \
+        # model_path or '.savedmodel' in model_path or '.pth' in model_path:
+        if '.zip' in model_path:
+            print("🔄🔄🔄🔄🔄 CALLFLOW: Entering manage.py - DonkeyCar Drive Loop 🔄🔄🔄🔄🔄")
+            print("🧠 PyTorch-trained model detected - handled by RLPilot class")
+            kl = None # Set kl to None since we will use RLPilot instead
+        elif '.h5' in model_path or '.trt' in model_path or '.tflite' in model_path or '.savedmodel' in model_path or '.pth' in model_path:
             load_model(kl, model_path)
 
             def reload_model(filename):
@@ -412,9 +419,14 @@ def drive(cfg, model_path=None, use_joystick=False, model_type=None,
                   inputs=['cam/image_array'], outputs=['cam/image_array_trans'])
             inputs = ['cam/image_array_trans'] + inputs[1:]
 
-        V.add(kl, inputs=inputs, outputs=outputs, run_condition='run_pilot')
+        # Configure the appropriate pilot based on model type
+        if model_path.endswith('.zip'):
+            print("🤖 Initializing RLPilot DonkeyCar Part...")
+            V.add(RLPilot(model_path), inputs=['cam/image_array'], outputs=['pilot/angle', 'pilot/throttle'], run_condition='run_pilot')
+        else:
+            V.add(kl, inputs=inputs, outputs=outputs, run_condition='run_pilot')
+        #V.add(kl, inputs=inputs, outputs=outputs, run_condition='run_pilot')
 
-    #
     # stop at a stop sign
     #
     if cfg.STOP_SIGN_DETECTOR:
@@ -796,6 +808,7 @@ def get_camera(cfg):
         if cfg.CAMERA_TYPE == "PICAM":
             from donkeycar.parts.camera import PiCamera
             cam = PiCamera(image_w=cfg.IMAGE_W, image_h=cfg.IMAGE_H, image_d=cfg.IMAGE_DEPTH,
+                           framerate=cfg.CAMERA_FRAMERATE,
                            vflip=cfg.CAMERA_VFLIP, hflip=cfg.CAMERA_HFLIP)
         elif cfg.CAMERA_TYPE == "WEBCAM":
             from donkeycar.parts.camera import Webcam
